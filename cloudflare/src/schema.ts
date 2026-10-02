@@ -13,8 +13,6 @@ export const productionPackSchema = {
     continuity_rules: { type: "array", items: { type: "string" } },
     shots: {
       type: "array",
-      minItems: 1,
-      maxItems: 20,
       items: {
         type: "object",
         properties: {
