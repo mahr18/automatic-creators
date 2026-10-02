@@ -1,8 +1,10 @@
+import json
+
 from agents import Runner
 
 from .agents import NICHE_DNA, build_agents
 from .config import settings
-from .models import BrainRequest, BrainResponse
+from .models import BrainRequest, BrainResponse, ProductionPack
 from .storage import MemoryStore
 from .tools.youtube import search_youtube
 
@@ -51,21 +53,29 @@ class ContentBrain:
         mode = self._mode(request)
         agents = build_agents()
         memory = self.memory.context()
+
         youtube_signals = []
+        youtube_error = None
         if settings.youtube_api_key:
-            youtube_query = request.message if mode != "idea" else (
-                "AI What If transformation timelapse viral YouTube"
-            )
-            youtube_signals = await search_youtube(
-                query=youtube_query,
-                max_results=10,
-                order="viewCount",
-            )
+            try:
+                youtube_query = request.message if mode != "idea" else (
+                    "AI What If transformation timelapse viral YouTube"
+                )
+                youtube_signals = await search_youtube(
+                    query=youtube_query,
+                    max_results=10,
+                    order="viewCount",
+                )
+            except Exception as exc:
+                youtube_error = str(exc)
 
         structured_youtube = "\n".join(
             f"- {x['title']} | {x['channel']} | views={x['views']} | {x['url']}"
             for x in youtube_signals
         ) or "No structured YouTube API data configured; use live web research instead."
+
+        if youtube_error:
+            structured_youtube += f"\nYouTube API warning: {youtube_error}"
 
         base = f"""
 PROJECT MEMORY:
@@ -108,9 +118,9 @@ RESEARCH BRIEF:
         )
         stages.append("strategy")
 
-        prompt_pack = await self._run(
+        draft_pack = await self._run(
             agents["prompt"],
-            f"""Compile a production-ready prompt pack.
+            f"""Compile a production-ready ProductionPack.
 
 OWNER REQUEST:
 {request.message}
@@ -122,11 +132,13 @@ RESEARCH:
 {research}
 """,
         )
+        if not isinstance(draft_pack, ProductionPack):
+            raise TypeError("Prompt Compiler did not return a ProductionPack.")
         stages.append("prompt_compilation")
 
         critique = await self._run(
             agents["critic"],
-            f"""Audit this production pack.
+            f"""Audit this ProductionPack.
 
 OWNER REQUEST:
 {request.message}
@@ -134,30 +146,33 @@ OWNER REQUEST:
 STRATEGY:
 {strategy}
 
-PROMPT PACK:
-{prompt_pack}
+PRODUCTION PACK:
+{draft_pack.model_dump_json(indent=2)}
 """,
         )
         stages.append("quality_check")
 
         final_pack = await self._run(
             agents["repair"],
-            f"""REPAIR THE FOLLOWING PRODUCTION PACK.
+            f"""REPAIR THIS ProductionPack.
 
 STRATEGY:
 {strategy}
 
 DRAFT:
-{prompt_pack}
+{draft_pack.model_dump_json(indent=2)}
 
 CRITIC:
 {critique}
 
-Return the complete corrected production pack.
+Return the complete corrected ProductionPack.
 """,
         )
+        if not isinstance(final_pack, ProductionPack):
+            raise TypeError("Prompt Repair Agent did not return a ProductionPack.")
         stages.append("repair")
 
+        pack_json = json.dumps(final_pack.model_dump(), ensure_ascii=False, indent=2)
         output = f"""# MAHER CONTENT BRAIN — {mode.upper()}
 
 ## Research
@@ -167,16 +182,16 @@ Return the complete corrected production pack.
 {strategy}
 
 ## Final Production Pack
-{final_pack}
+{pack_json}
 
 ## QA Report
 {critique}
 
 ## Generation Checklist
-- Generate shots separately when useful.
-- Keep subject identity, environment, camera direction, and time progression consistent.
-- Review the first 3 seconds before rendering the full sequence.
-- Do not copy a competitor's exact title, thumbnail, script, or shot sequence.
+- Render shots independently when useful.
+- Preserve subject identity, environment, camera direction, and time progression.
+- Review the first 3 seconds before rendering the entire sequence.
+- Never copy a competitor's exact title, thumbnail, script, or shot sequence.
 """
 
         saved = False
@@ -184,13 +199,14 @@ Return the complete corrected production pack.
             self.memory.log_run(mode, request.message, output)
             self.memory.add_memory(
                 "last_run",
-                f"Mode={mode}; request={request.message}; stages={','.join(stages)}",
+                f"Mode={mode}; request={request.message}; shots={len(final_pack.shots)}",
             )
             saved = True
 
         return BrainResponse(
             mode=mode,
             output=output,
+            production_pack=final_pack,
             memory_saved=saved,
             stages=stages,
         )
