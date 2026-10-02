@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 
 from .brain import ContentBrain
 from .config import settings
-from .models import BrainRequest, MemoryInput, VideoRequest
+from .models import BrainRequest, MemoryInput, RenderPackRequest, VideoRequest
 from .storage import MemoryStore
 from .video import generate_with_veo
 
@@ -66,11 +66,39 @@ async def generate_video(request: VideoRequest):
         request.prompt,
         request.aspect_ratio,
     )
-    if hasattr(result, "__await__"):
-        result = await result
     if result.status == "error":
         raise HTTPException(status_code=502, detail=result.message or "Veo generation failed.")
     return result
+
+
+@app.post("/api/video/render-pack")
+async def render_pack(request: RenderPackRequest):
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured.")
+
+    results = []
+    for shot in request.shots[: request.limit]:
+        result = await asyncio.to_thread(
+            generate_with_veo,
+            shot.prompt,
+            request.aspect_ratio,
+        )
+        results.append({
+            "shot_id": shot.shot_id,
+            "status": result.status,
+            "uri": result.uri,
+            "message": result.message,
+        })
+        if result.status == "error":
+            break
+
+    return {
+        "provider": "veo",
+        "requested": min(request.limit, len(request.shots)),
+        "results": results,
+        "assembled_video": None,
+        "note": "Shot rendering is implemented; automatic final assembly is the next production layer.",
+    }
 
 
 @app.post("/api/memory")
