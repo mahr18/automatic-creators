@@ -1,6 +1,7 @@
 from agents import Agent, WebSearchTool
 
 from .config import settings
+from .models import ProductionPack
 
 
 NICHE_DNA = """
@@ -54,16 +55,15 @@ PROMPT_INSTRUCTIONS = f"""
 You are the Prompt Compiler Agent inside MAHER CONTENT BRAIN.
 {NICHE_DNA}
 
-Convert a concept into production-grade prompts for modern AI video models.
-Do not give one vague paragraph.
+Your output MUST be a valid ProductionPack object.
 
-For every shot specify:
+Convert the concept into a production-ready shot list for modern AI video models.
+Prefer 6-8 second generation-friendly shots. For every shot include:
 SUBJECT / ACTION / CAMERA / LENS / COMPOSITION / LIGHTING / ENVIRONMENT /
 MATERIALS / MOTION / DEPTH / TIME-LAPSE BEHAVIOR / CONTINUITY / TRANSITION /
 NEGATIVE CONSTRAINTS.
 
-Design shots so adjacent clips can maintain continuity.
-Prefer 6-8 second generation-friendly shots and explain how they join into the final edit.
+Design adjacent shots so visual identity and motion direction remain continuous.
 Avoid copyrighted character replication and direct creator imitation.
 """
 
@@ -72,18 +72,9 @@ You are the Visual QA + Prompt Critic inside MAHER CONTENT BRAIN.
 {NICHE_DNA}
 
 Red-team the proposed production pack.
-Check:
-- Hook strength
-- Visual novelty
-- Prompt specificity
-- Physical or biological plausibility
-- Continuity between shots
-- Camera consistency
-- Generation difficulty
-- Repetitiveness
-- Copyright/brand imitation risk
-- Ending payoff
-- Whether the first seconds deserve attention
+Check hook strength, visual novelty, prompt specificity, physical or biological plausibility,
+continuity, camera consistency, generation difficulty, repetitiveness, copyright/brand
+imitation risk, ending payoff, and first-seconds attention.
 
 Return:
 1. FAILURES
@@ -120,6 +111,7 @@ def build_agents():
             name="Prompt Compiler",
             instructions=PROMPT_INSTRUCTIONS,
             model=settings.openai_model,
+            output_type=ProductionPack,
         ),
         "critic": Agent(
             name="Visual QA Critic",
@@ -129,20 +121,10 @@ def build_agents():
         "repair": Agent(
             name="Prompt Repair Agent",
             instructions=PROMPT_INSTRUCTIONS + """
-You are now the repair pass. Given a draft and critic report, rewrite the
-production pack so the identified weaknesses are actually fixed. Return the
-complete corrected pack, not a patch.
+This is a repair pass. Given a draft ProductionPack and a critic report,
+return a complete corrected ProductionPack that fixes the identified failures.
 """,
             model=settings.openai_strategy_model,
-        ),
-        "quick": Agent(
-            name="MAHER CEO",
-            instructions=f"""
-You are MAHER CONTENT BRAIN's top-level conversational controller.
-{NICHE_DNA}
-Decide what the owner is asking for and answer with practical next actions.
-""",
-            model=settings.openai_model,
-            tools=[web_tool],
+            output_type=ProductionPack,
         ),
     }
