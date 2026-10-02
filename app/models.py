@@ -8,7 +8,7 @@ Mode = Literal["auto", "idea", "build", "explore"]
 class BrainRequest(BaseModel):
     message: str = Field(min_length=1, max_length=12000)
     mode: Mode = "auto"
-    reference_image_data_url: str | None = None
+    reference_image_data_url: str | None = Field(default=None, max_length=9000000)
     save_to_memory: bool = True
 
 
