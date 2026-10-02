@@ -8,7 +8,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: BRAIN_ACCESS_TOKEN
-        sync: false
+        generateValue: true
       - key: OPENAI_RESEARCH_MODEL
         value: gpt-6-luna
       - key: OPENAI_STRATEGY_MODEL
