@@ -1,3 +1,6 @@
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
 import { generateJson, productionPackSchema, qualitySchema, researchSchema } from "./gemini";
 import { optionalYouTubeSignals } from "./youtube";
 
@@ -43,9 +46,7 @@ async function usageGuard(env: Env, provider: string): Promise<void> {
     .first<{ calls: number }>();
   const calls = Number(row?.calls || 0);
   if (calls >= limit) {
-    throw new Error(
-      `App safety limit reached for ${provider} today (${limit} calls). This guard prevents accidental quota/cost spikes.`
-    );
+    throw new Error(`App safety limit reached for ${provider} today (${limit} calls).`);
   }
   await env.DB.prepare(
     "INSERT INTO usage(day, provider, calls) VALUES (?, ?, 1) ON CONFLICT(day, provider) DO UPDATE SET calls = calls + 1"
@@ -244,8 +245,8 @@ Return JSON matching the required schema.`,
 
       return { ok: true, jobId, mode, result: finalPack };
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : String(error);
-      await updateJob(this.env, jobId, { status: "failed", error: messageText });
+      const errorText = error instanceof Error ? error.message : String(error);
+      await updateJob(this.env, jobId, { status: "failed", error: errorText });
       throw error;
     }
   }
