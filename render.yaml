@@ -7,15 +7,25 @@ services:
     envVars:
       - key: OPENAI_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-5.6-luna
+      - key: BRAIN_ACCESS_TOKEN
+        sync: false
+      - key: OPENAI_RESEARCH_MODEL
+        value: gpt-6-luna
       - key: OPENAI_STRATEGY_MODEL
-        value: gpt-5.6-terra
+        value: gpt-6.1-sol
+      - key: OPENAI_PROMPT_MODEL
+        value: gpt-6-luna
       - key: OPENAI_CRITIC_MODEL
-        value: gpt-5.6-luna
+        value: gpt-6.1-sol
+      - key: OPENAI_REPAIR_MODEL
+        value: gpt-6.1-sol
       - key: YOUTUBE_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: PORT
+        value: "10000"
       - key: DATABASE_PATH
         value: data/brain.sqlite3
+      - key: OUTPUT_DIR
+        value: data/outputs
