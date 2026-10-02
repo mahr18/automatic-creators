@@ -27,6 +27,7 @@ interface D1Database {
 }
 
 interface Env {
+  ASSETS: { fetch(request: Request): Promise<Response> };
   DB: D1Database;
   BRAIN_WORKFLOW: {
     create(options: { id?: string; params: unknown }): Promise<{ id: string }>;
