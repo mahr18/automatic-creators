@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,3 +25,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# The Agents SDK resolves the OpenAI credential from the standard environment
+# variable. Allow pydantic-settings/.env to feed that environment safely on the server.
+if settings.openai_api_key:
+    os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
