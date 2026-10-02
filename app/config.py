@@ -6,14 +6,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     openai_api_key: str | None = None
-    openai_model: str = "gpt-5.6-luna"
-    openai_strategy_model: str = "gpt-5.6-terra"
-    openai_critic_model: str = "gpt-5.6-luna"
+    openai_research_model: str = "gpt-6-luna"
+    openai_strategy_model: str = "gpt-6.1-sol"
+    openai_prompt_model: str = "gpt-6-luna"
+    openai_critic_model: str = "gpt-6.1-sol"
+    openai_repair_model: str = "gpt-6.1-sol"
     youtube_api_key: str | None = None
     gemini_api_key: str | None = None
+    brain_access_token: str | None = None
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 10000
     database_path: str = "data/brain.sqlite3"
+    output_dir: str = "data/outputs"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -23,10 +27,16 @@ class Settings(BaseSettings):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
+    @property
+    def output_directory(self) -> Path:
+        path = Path(self.output_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
 
 settings = Settings()
 
-# The Agents SDK resolves the OpenAI credential from the standard environment
-# variable. Allow pydantic-settings/.env to feed that environment safely on the server.
+# The Agents SDK resolves the OpenAI credential from OPENAI_API_KEY.
+# Feed it from pydantic-settings/.env only on the server; never expose it to the browser.
 if settings.openai_api_key:
     os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
