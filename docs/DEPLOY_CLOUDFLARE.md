@@ -204,3 +204,47 @@ Veo/video API غير مشغل ضمن المسار المجاني الافترا�
 - app guard
 
 ثم شغّل طلبًا قصيرًا قبل تجربة مشروع طويل.
+
+
+## O) مراقبة المنافسين بدون YouTube API
+
+يمكن تخزين Channel IDs عامة في:
+
+POST /api/watchlist
+
+مثال body:
+
+{"channel_id":"UCxxxxxxxxxxxxxxxxxxxx","label":"Competitor A"}
+
+العقل يقرأ آخر فيديوهات القنوات المحفوظة من YouTube RSS العام، لذلك لا تحتاج YOUTUBE_API_KEY لهذه الوظيفة.
+
+لعرض القائمة:
+
+GET /api/watchlist
+
+## P) ذاكرة الأداء بدون YouTube Analytics API
+
+يمكن حفظ أرقام من YouTube Studio يدويًا في:
+
+POST /api/metrics
+
+الحقول المدعومة:
+video_id, title, published_at, impressions, views, ctr,
+avg_view_duration_seconds, avg_percentage_viewed, likes, comments, notes
+
+ثم يستخدم العقل آخر سجلات الأداء كذاكرة تاريخية في مرحلة البحث. لا يعتبرها بيانات لحظية من الإنترنت.
+
+عرض السجلات:
+
+GET /api/metrics
+
+## Q) ماذا بقي خارج المسار المجاني
+
+رفع الفيديو تلقائيًا إلى YouTube، توليد فيديوهات Veo عبر API، وتجميع MP4 سحابي طويل المدة تحتاج تكاملات أو موارد لا أريد تفعيلها تلقائيًا ضمن شرط $0.
+
+لهذا النسخة الحالية تفصل:
+Brain → Production Pack → Prompts
+عن
+Video generation → Assembly → Publishing
+
+وهذا يسمح باستخدام Google Flow/Veo من واجهتك التي لديك، بينما يبقى العقل نفسه على المسار المجاني.
