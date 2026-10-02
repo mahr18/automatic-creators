@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -6,8 +7,9 @@ from fastapi.responses import FileResponse
 
 from .brain import ContentBrain
 from .config import settings
-from .models import BrainRequest, MemoryInput
+from .models import BrainRequest, MemoryInput, VideoRequest
 from .storage import MemoryStore
+from .video import generate_with_veo
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 UI_DIR = BASE_DIR / "ui"
@@ -53,6 +55,22 @@ async def run_brain(request: BrainRequest):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Brain run failed: {exc}") from exc
+
+
+@app.post("/api/video")
+async def generate_video(request: VideoRequest):
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured.")
+    result = await asyncio.to_thread(
+        generate_with_veo,
+        request.prompt,
+        request.aspect_ratio,
+    )
+    if hasattr(result, "__await__"):
+        result = await result
+    if result.status == "error":
+        raise HTTPException(status_code=502, detail=result.message or "Veo generation failed.")
+    return result
 
 
 @app.post("/api/memory")
