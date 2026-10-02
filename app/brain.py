@@ -4,6 +4,7 @@ from .agents import NICHE_DNA, build_agents
 from .config import settings
 from .models import BrainRequest, BrainResponse
 from .storage import MemoryStore
+from .tools.youtube import search_youtube
 
 
 class ContentBrain:
@@ -50,12 +51,30 @@ class ContentBrain:
         mode = self._mode(request)
         agents = build_agents()
         memory = self.memory.context()
+        youtube_signals = []
+        if settings.youtube_api_key:
+            youtube_query = request.message if mode != "idea" else (
+                "AI What If transformation timelapse viral YouTube"
+            )
+            youtube_signals = await search_youtube(
+                query=youtube_query,
+                max_results=10,
+                order="viewCount",
+            )
+
+        structured_youtube = "\n".join(
+            f"- {x['title']} | {x['channel']} | views={x['views']} | {x['url']}"
+            for x in youtube_signals
+        ) or "No structured YouTube API data configured; use live web research instead."
 
         base = f"""
 PROJECT MEMORY:
 {memory}
 
 {NICHE_DNA}
+
+STRUCTURED YOUTUBE SIGNALS:
+{structured_youtube}
 
 OWNER REQUEST:
 {request.message}
@@ -70,6 +89,7 @@ Mode: {mode}
 
 {base}
 
+Use the structured YouTube signals when present, but verify and extend them with web research.
 Return a research brief with useful current signals, examples, and production patterns.
 """,
             request.reference_image_data_url,
