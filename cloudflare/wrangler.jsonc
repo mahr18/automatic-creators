@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "maher-content-brain-db",
-      "database_id": "REPLACE_AFTER_D1_CREATE"
+      "database_id": "00000001-00000000-000050f8-8fca234305a6a0a678e159f7b35b76ca"
     }
   ],
   "workflows": [
