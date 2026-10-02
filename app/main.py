@@ -54,6 +54,13 @@ def health():
         "youtube_configured": bool(settings.youtube_api_key),
         "veo_configured": bool(settings.gemini_api_key),
         "auth_configured": bool(settings.brain_access_token),
+        "models": {
+            "research": settings.openai_research_model,
+            "strategy": settings.openai_strategy_model,
+            "prompt": settings.openai_prompt_model,
+            "critic": settings.openai_critic_model,
+            "repair": settings.openai_repair_model,
+        },
     }
 
 
