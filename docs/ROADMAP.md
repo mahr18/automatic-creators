@@ -5,6 +5,7 @@
 - [x] Auto idea/build routing
 - [x] Live web research
 - [x] Strategy agent
+- [x] Machine-readable ProductionPack
 - [x] Shot-by-shot prompt compiler
 - [x] Visual critic
 - [x] Repair pass
@@ -12,18 +13,20 @@
 - [x] CI
 
 ## Phase 2 — Research Intelligence
-- [ ] YouTube Data API adapter
+- [x] YouTube Data API adapter
 - [ ] Competitor watchlists
 - [ ] Trend snapshots
 - [ ] Source registry
 - [ ] Duplicate / copied-idea detector
 
 ## Phase 3 — Visual Production
+- [x] Veo 3.1 adapter
+- [x] Single-shot render endpoint
+- [x] Multi-shot render-pack endpoint
 - [ ] Storyboard image generation
-- [ ] Veo 3.1 adapter
 - [ ] First/last-frame continuity
-- [ ] Shot renderer
-- [ ] Automatic assembly
+- [ ] Automatic final assembly
+- [ ] Render job queue
 
 ## Phase 4 — Publishing
 - [ ] Thumbnail generation
