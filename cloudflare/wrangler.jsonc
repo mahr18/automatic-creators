@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "maher-content-brain",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-10-02",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./public",
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "single-page-application"
+  },
+  "workflows": [
+    {
+      "name": "maher-content-brain",
+      "binding": "BRAIN_WORKFLOW",
+      "class_name": "BrainWorkflow",
+      "default_retention": {
+        "success_retention": "3 days",
+        "error_retention": "7 days"
+      }
+    }
+  ]
+}
