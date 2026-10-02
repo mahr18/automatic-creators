@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07090d">
+<title>MAHER CONTENT BRAIN</title>
+<style>
+:root{color-scheme:dark;--bg:#07090d;--panel:#10141b;--panel2:#171d26;--line:#293341;--text:#f5f7fa;--muted:#98a5b5;--accent:#ff2b3d;--gold:#ffd24a;--ok:#42d392;--danger:#ff6a77}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#1b2330 0,#07090d 48%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+main{width:min(980px,100%);margin:auto;padding:20px 14px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.brand{font-weight:950;letter-spacing:.04em}.badge{font-size:10px;color:var(--gold);border:1px solid #4c401b;border-radius:999px;padding:6px 9px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;padding:15px;box-shadow:0 18px 60px #0006;margin-top:12px}
+.grid{display:grid;grid-template-columns:1fr 170px;gap:10px}.full{width:100%}
+input,textarea,select,button{font:inherit;border:1px solid var(--line);border-radius:13px;background:#0b0f15;color:var(--text);padding:12px;outline:none}input:focus,textarea:focus,select:focus{border-color:#536173}textarea{min-height:170px;resize:vertical;line-height:1.6}
+button{cursor:pointer;font-weight:850;background:var(--accent);border-color:transparent}button.secondary{background:#1a222d}button:disabled{opacity:.55;cursor:wait}
+.row{display:grid;grid-template-columns:1fr 150px 120px;gap:9px;margin-top:10px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.status{min-height:24px;margin:11px 2px 0;color:var(--muted);font-size:13px}.status.ok{color:var(--ok)}.status.err{color:var(--danger)}
+.stages{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}.stage{font-size:11px;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:#0b0f15;color:var(--muted)}.stage.on{color:var(--gold)}
+.output{white-space:pre-wrap;word-break:break-word;line-height:1.65;font-size:13px}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.metric{border:1px solid var(--line);border-radius:14px;padding:10px;background:#0c1016}.metric b{display:block;font-size:16px}.metric span{color:var(--muted);font-size:10px}
+.small{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}.hidden{display:none}
+@media(max-width:680px){.grid,.row,.meta{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><div class="brand">MAHER CONTENT BRAIN</div><div class="badge">FREE-FIRST • MOBILE</div></div>
+
+<section class="card">
+<div class="grid">
+<input id="token" placeholder="BRAIN_ACCESS_TOKEN — مفتاح دخول العقل">
+<button id="gen" class="secondary">توليد رمز دخول</button>
+</div>
+<div class="small">هذا ليس Gemini API ولا OpenAI API. هو رمز خاص لموقعك حتى لا يستطيع أي شخص استخدام الـBrain من الرابط العام.</div>
+<textarea id="message" placeholder="اكتب طلبك: ابنِ لي فيديو عن ماذا يحدث للطماطم من البذرة إلى الحصاد، أو اكتب: ما عندي فكرة"></textarea>
+<input id="image" type="file" accept="image/*" class="full" style="margin-top:10px">
+<div class="row">
+<select id="mode"><option value="auto">AUTO</option><option value="idea">IDEA — أفكار</option><option value="build">BUILD — ابنِ فكرتي</option><option value="explore">EXPLORE — استكشاف</option></select>
+<button id="run">تشغيل العقل</button>
+<button id="statusBtn" class="secondary">الحالة</button>
+</div>
+<div class="status" id="status"></div>
+</section>
+
+<section class="card">
+<div class="stages" id="stages"></div>
+<div class="meta" id="metrics"></div>
+<pre class="output" id="output">جاهز.</pre>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+$("token").value=localStorage.getItem("maher_brain_token")||"";
+$("gen").onclick=()=>{
+ const bytes=new Uint8Array(24); crypto.getRandomValues(bytes);
+ const token=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+ $("token").value=token; localStorage.setItem("maher_brain_token",token);
+ $("status").textContent="تم توليد رمز. استخدم نفس الرمز في Secret باسم BRAIN_ACCESS_TOKEN على Cloudflare.";
+};
+const auth=()=>({Authorization:"Bearer "+$("token").value.trim()});
+const imageData=file=>new Promise((resolve,reject)=>{
+ if(!file)return resolve(null);
+ const img=new Image(), fr=new FileReader();
+ fr.onload=()=>{img.onload=()=>{
+  const max=1200, s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+  const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(img.naturalWidth*s)); c.height=Math.max(1,Math.round(img.naturalHeight*s));
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height); c.toBlob(b=>{
+   if(!b)return reject(new Error("تعذر ضغط الصورة"));
+   const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(b);
+  },"image/jpeg",.8);
+ };img.onerror=()=>reject(new Error("تعذر قراءة الصورة")); img.src=fr.result};
+ fr.onerror=reject; fr.readAsDataURL(file);
+});
+function setStatus(t,kind=""){const e=$("status");e.textContent=t;e.className="status "+kind}
+function renderStages(list){$("stages").innerHTML=list.map(x=>'<span class="stage on">✓ '+x+'</span>').join("")}
+function renderMetrics(pack,qa){
+ const items=[
+  ["Shots",pack?.shots?.length||0],
+  ["QA Hook",qa?.hook??"—"],
+  ["QA Visual",qa?.visual_novelty??"—"],
+  ["QA Continuity",qa?.continuity??"—"]
+ ];
+ $("metrics").innerHTML=items.map(x=>'<div class="metric"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>').join("");
+}
+let poll=null;
+$("run").onclick=async()=>{
+ const message=$("message").value.trim(); if(!message)return;
+ const token=$("token").value.trim(); if(!token){setStatus("ضع BRAIN_ACCESS_TOKEN أولًا.","err");return}
+ $("run").disabled=true; $("output").textContent=""; $("metrics").innerHTML=""; setStatus("تم إرسال المهمة إلى العقل…");
+ try{
+  const image=await imageData($("image").files[0]);
+  localStorage.setItem("maher_brain_token",token);
+  const res=await fetch("/api/jobs",{method:"POST",headers:{"content-type":"application/json",...auth()},body:JSON.stringify({message,mode:$("mode").value,reference_image_data_url:image})});
+  const data=await res.json(); if(!res.ok)throw new Error(data.error||"تعذر إنشاء المهمة");
+  const id=data.job_id; setStatus("المهمة "+id.slice(0,8)+"… بدأت. سيتم تحديث النتيجة تلقائيًا.");
+  poll=setInterval(async()=>{
+   try{
+    const rr=await fetch("/api/jobs/"+encodeURIComponent(id),{headers:auth()}); const job=await rr.json();
+    if(!rr.ok)throw new Error(job.error||"تعذر قراءة المهمة");
+    if(job.status==="queued"||job.status==="running"){setStatus(job.status==="queued"?"في قائمة الانتظار…":"العقل يعمل: بحث → بناء → نقد وإصلاح → حفظ");return}
+    clearInterval(poll);
+    if(job.status==="failed"){setStatus("فشلت المهمة: "+job.error,"err");return}
+    const result=JSON.parse(job.result_json||"{}");
+    $("output").textContent=JSON.stringify(result,null,2);
+    renderStages(["research","strategy + production","critic + repair","memory"]);
+    renderMetrics(result.production_pack,result.qa);
+    setStatus("اكتمل التنفيذ وحُفظت النتيجة في الذاكرة.","ok");
+   }catch(e){clearInterval(poll);setStatus(e.message,"err")}
+  },2500);
+ }catch(e){setStatus(e.message,"err")}
+ finally{$("run").disabled=false}
+};
+$("statusBtn").onclick=async()=>{
+ try{
+  const r=await fetch("/api/health"); const d=await r.json();
+  setStatus(`Provider: ${d.provider} | Model: ${d.gemini_model} | Gemini: ${d.gemini_configured?"✓":"✗"} | OpenAI: ${d.openai_enabled?"مفعّل":"محمي"} | YouTube: ${d.youtube_configured?"مفعّل":"اختياري"} | Guard: ${d.gemini_daily_app_guard}/day`);
+ }catch(e){setStatus("تعذر فحص الحالة.","err")}
+};
+</script>
+</body>
+</html>
