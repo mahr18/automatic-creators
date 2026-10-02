@@ -13,8 +13,8 @@ class VideoResult:
     message: str | None = None
 
 
-async def generate_with_veo(prompt: str, aspect_ratio: str = "16:9") -> VideoResult:
-    """Optional Veo 3.1 adapter. Kept isolated so the brain can swap providers later."""
+def generate_with_veo(prompt: str, aspect_ratio: str = "16:9") -> VideoResult:
+    """Optional synchronous Veo 3.1 adapter; call from a worker thread."""
     if not settings.gemini_api_key:
         return VideoResult(
             provider="veo",
@@ -25,11 +25,11 @@ async def generate_with_veo(prompt: str, aspect_ratio: str = "16:9") -> VideoRes
     try:
         from google import genai
         from google.genai import types
-    except ImportError as exc:
+    except ImportError:
         return VideoResult(
             provider="veo",
             status="dependency_missing",
-            message="Install the video extra: pip install -e '.[video]'",
+            message="Install the video extra with pip install -e '.[video]'.",
         )
 
     try:
