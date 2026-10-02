@@ -48,3 +48,31 @@ CREATE TABLE IF NOT EXISTS usage (
   calls INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY(day, provider)
 );
+
+CREATE TABLE IF NOT EXISTS watchlists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id TEXT NOT NULL UNIQUE,
+  label TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_watchlists_enabled ON watchlists(enabled);
+
+CREATE TABLE IF NOT EXISTS metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  video_id TEXT,
+  title TEXT,
+  published_at TEXT,
+  impressions INTEGER,
+  views INTEGER,
+  ctr REAL,
+  avg_view_duration_seconds REAL,
+  avg_percentage_viewed REAL,
+  likes INTEGER,
+  comments INTEGER,
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_metrics_created_at ON metrics(created_at);
