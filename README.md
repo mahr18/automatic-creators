@@ -1,76 +1,112 @@
 # MAHER CONTENT BRAIN
 
-A mobile-first agentic content system for the What If + Transformation + Timelapse + Curiosity YouTube niche.
+Mobile-first agentic content system for the What If + Transformation + Timelapse + Curiosity niche.
 
-## Current capabilities
+## Primary deployment: $0-first Cloudflare Edition
 
-- Natural-language requests from a phone browser.
-- Automatic routing between idea discovery and idea building.
-- Live web research using the OpenAI Agents SDK web-search tool.
-- Structured YouTube Data API enrichment when YOUTUBE_API_KEY is configured.
-- Creative strategy stage for visual-first concepts.
-- Machine-readable shot-by-shot ProductionPack output.
-- Red-team visual QA and automatic repair pass.
-- Persistent lightweight project memory in SQLite.
-- Optional Veo 3.1 shot rendering endpoint.
-- Responsive browser interface.
-- Docker runtime and GitHub Actions CI.
+Use the `cloudflare/` directory as the main deployment:
 
-## Flow
+- Cloudflare Workers — mobile UI + API.
+- Cloudflare Workflows — durable multi-step orchestration.
+- Cloudflare D1 — persistent jobs, memory, ideas and source registry.
+- Gemini API — default AI provider.
+- YouTube Data API — optional only.
+- OpenAI API — optional, explicitly blocked by the cost guard by default.
+- Video API generation — intentionally OFF in the $0 path.
 
-Request → Research → Strategy → Prompt Compiler → Visual QA → Repair → Render Pack
+The old FastAPI/Render implementation remains under `app/` as a legacy/local path.
 
-The project deliberately starts with orchestration instead of training a new model from scratch. The brain is the combination of a strong model, tools, memory, constraints, and workflow.
+## Current brain pipeline
 
-## Setup
+Owner request
+→ Research
+→ Creative Director + Strategy
+→ Production Pack
+→ Visual QA + Repair
+→ Persistent Memory
 
-1. Copy .env.example to .env.
-2. Put the OpenAI API key in .env.
-3. Optionally add YOUTUBE_API_KEY for structured YouTube metrics.
-4. Optionally add GEMINI_API_KEY and install the video extra for Veo rendering.
-5. Install the development package with pip install -e ".[dev]".
-6. Run uvicorn app.main:app --reload.
-7. Open the server URL from the iPhone browser.
+The Production Pack contains:
+- concept and viewer question
+- 0–3 second visual hook
+- script
+- long-form plan
+- Shorts cut plan
+- title variants
+- thumbnail concept
+- continuity rules
+- shot-by-shot AI video prompts
 
-For server deployment, provide secrets as platform environment variables. Never commit API keys.
+## Free-first rule
 
-## Model policy
+The cloud version defaults to Gemini and has an application-level daily call guard.
 
-Current defaults use the GPT-6 family:
-- Research: gpt-6-luna
-- Strategy: gpt-6.1-sol
-- Prompt compiler: gpt-6-luna
-- Critic: gpt-6.1-sol
-- Repair: gpt-6.1-sol
+OpenAI is not used merely because an OpenAI key exists. To enable it intentionally you must set:
 
-For maximum reasoning, set the Strategy/Critic/Repair roles to gpt-6-astra. OpenAI currently describes GPT-6 Astra as its highest-intelligence model, GPT-6.1 Sol as near-Astra at lower cost, and GPT-6 Luna as the efficient high-volume option.
+`AI_PROVIDER=openai`
+`ENABLE_OPENAI_API=true`
 
-## Current API
+That is a paid API path and is outside the $0 requirement.
+
+## Start here
+
+Read the complete mobile-friendly deployment guide:
+
+`docs/DEPLOY_CLOUDFLARE.md`
+
+Repository:
+https://github.com/mahr18/automatic-creators
+
+Cloudflare app:
+`cloudflare/`
+
+## API
 
 - GET /api/health
-- POST /api/brain
-- POST /api/video
-- POST /api/video/render-pack
-- POST /api/memory
+- POST /api/jobs
+- GET /api/jobs/:id
 - GET /api/memory
+- POST /api/memory
+- GET /api/quota
 
-## Security and deployment notes
+## Security
 
-The API is protected by BRAIN_ACCESS_TOKEN so a public URL cannot be used anonymously against your OpenAI/Gemini quota.
+Never commit API keys.
 
-Render Free uses an ephemeral filesystem, so local SQLite memory and locally rendered MP4 files can disappear after restarts, redeploys, or idle spin-down. Use external persistent storage before relying on the memory as a permanent brain. Render documents this Free-service limitation.
+Use Cloudflare Secrets for:
+- `GEMINI_API_KEY`
+- `BRAIN_ACCESS_TOKEN`
+- optionally `OPENAI_API_KEY`
 
-## Next upgrades
+The browser only receives the non-secret access token you type into the app. Provider keys stay server-side.
 
-- Competitor watchlists and trend snapshots.
-- Source registry with URLs and timestamps.
-- Copy/near-duplicate idea detection.
-- Storyboard frame generation.
-- First/last-frame continuity.
-- Automatic multi-shot video assembly.
-- Thumbnail generation.
-- Shorts extraction.
-- Channel analytics ingestion.
-- Retention-driven strategy memory.
-- Background job queue for long renders.
-- Authentication and private storage.
+## Project links
+
+GitHub:
+https://github.com/mahr18/automatic-creators
+
+Google AI Studio:
+https://aistudio.google.com/
+
+Gemini API keys:
+https://aistudio.google.com/apikey
+
+Gemini documentation:
+https://ai.google.dev/gemini-api/docs
+
+Cloudflare Dashboard:
+https://dash.cloudflare.com/
+
+Cloudflare Workers:
+https://developers.cloudflare.com/workers/
+
+Cloudflare D1:
+https://developers.cloudflare.com/d1/
+
+Cloudflare Workflows:
+https://developers.cloudflare.com/workflows/
+
+Cloudflare Workers Builds:
+https://developers.cloudflare.com/workers/ci-cd/builds/
+
+OpenAI API keys:
+https://platform.openai.com/api-keys
