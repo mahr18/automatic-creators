@@ -1,20 +1,22 @@
-# Copy this file to .dev.vars for local Cloudflare development.
-# NEVER commit real secrets.
+# Local development only. Never commit real secrets.
 
 BRAIN_ACCESS_TOKEN=replace-with-a-long-random-token
 GEMINI_API_KEY=replace-with-your-gemini-api-key
 
-# Optional. Keep AI_PROVIDER=gemini to stay on the $0 path.
+# $0-first defaults
 AI_PROVIDER=gemini
 GEMINI_TEXT_MODEL=gemini-3.8-flash
 GEMINI_MAX_OUTPUT_TOKENS=7000
-ENABLE_OPENAI_FALLBACK=false
+GEMINI_DAILY_CALL_GUARD=40
+
+# Optional paid fallback — stays OFF
+ENABLE_OPENAI_API=false
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-luna
 OPENAI_WEB_SEARCH=false
 
-# Optional. You can omit this; the brain works without it.
+# Optional — you said you can omit YouTube API for now.
 YOUTUBE_API_KEY=
 
-# Hard safety switch: video generation through API is OFF by default.
+# Hard-off switch for metered video APIs
 ENABLE_VIDEO_API=false
