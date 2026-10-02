@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: maher-content-brain
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.6-luna
+      - key: OPENAI_STRATEGY_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_CRITIC_MODEL
+        value: gpt-5.6-luna
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_PATH
+        value: data/brain.sqlite3
