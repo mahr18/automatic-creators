@@ -21,3 +21,8 @@ class BrainResponse(BaseModel):
 class MemoryInput(BaseModel):
     label: str
     content: str = Field(min_length=1)
+
+
+class VideoRequest(BaseModel):
+    prompt: str = Field(min_length=1)
+    aspect_ratio: Literal["16:9", "9:16"] = "16:9"
