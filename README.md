@@ -36,7 +36,14 @@ For server deployment, provide secrets as platform environment variables. Never 
 
 ## Model policy
 
-Default is GPT-5.6 Luna for cost control. Strategy and repair default to GPT-5.6 Terra. Model IDs are configurable without code changes. OpenAI's current model catalog lists GPT-5.6 Luna, Terra, and Sol for the Responses API; Sol is the highest-intelligence option among those three.
+Current defaults use the GPT-6 family:
+- Research: gpt-6-luna
+- Strategy: gpt-6.1-sol
+- Prompt compiler: gpt-6-luna
+- Critic: gpt-6.1-sol
+- Repair: gpt-6.1-sol
+
+For maximum reasoning, set the Strategy/Critic/Repair roles to gpt-6-astra. OpenAI currently describes GPT-6 Astra as its highest-intelligence model, GPT-6.1 Sol as near-Astra at lower cost, and GPT-6 Luna as the efficient high-volume option.
 
 ## Current API
 
@@ -46,6 +53,12 @@ Default is GPT-5.6 Luna for cost control. Strategy and repair default to GPT-5.6
 - POST /api/video/render-pack
 - POST /api/memory
 - GET /api/memory
+
+## Security and deployment notes
+
+The API is protected by BRAIN_ACCESS_TOKEN so a public URL cannot be used anonymously against your OpenAI/Gemini quota.
+
+Render Free uses an ephemeral filesystem, so local SQLite memory and locally rendered MP4 files can disappear after restarts, redeploys, or idle spin-down. Use external persistent storage before relying on the memory as a permanent brain. Render documents this Free-service limitation.
 
 ## Next upgrades
 
