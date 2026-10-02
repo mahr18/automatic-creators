@@ -110,3 +110,10 @@ https://developers.cloudflare.com/workers/ci-cd/builds/
 
 OpenAI API keys:
 https://platform.openai.com/api-keys
+
+## Final hosted app
+
+The production daily-use UI is now hosted on Floot:
+https://maher-content-brain.floot.app
+
+The `cloudflare/` implementation remains as the legacy/self-host deployment path; the hosted Floot app is the recommended user-facing build.
