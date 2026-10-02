@@ -3,6 +3,7 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { generateJson, productionPackSchema, qualitySchema, researchSchema } from "./gemini";
 import { optionalYouTubeSignals } from "./youtube";
+import { readWatchlist } from "./youtube-rss";
 
 type BrainParams = {
   jobId: string;
@@ -65,15 +66,36 @@ function modeFor(message: string, mode: BrainParams["mode"]): BrainParams["mode"
   return /(ما عندي فكرة|ماعندي فكرة|أعطني فكرة|اعطيني فكرة|no idea|surprise me)/i.test(t) ? "idea" : "build";
 }
 
-function ideaFingerprint(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 10)
-    .join("-");
+function tokens(value: string): Set<string> {
+  return new Set(
+    value.toLowerCase()
+      .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+  );
+}
+
+function similarity(a: string, b: string): number {
+  const aa = tokens(a);
+  const bb = tokens(b);
+  const union = new Set([...aa, ...bb]).size;
+  if (!union) return 0;
+  let intersection = 0;
+  for (const item of aa) if (bb.has(item)) intersection++;
+  return intersection / union;
+}
+
+function duplicateSignals(title: string, recent: string[]) {
+  let highest = 0;
+  let nearest = "";
+  for (const other of recent) {
+    const score = similarity(title, other);
+    if (score > highest) {
+      highest = score;
+      nearest = other;
+    }
+  }
+  return { highest: Math.round(highest * 100) / 100, nearest };
 }
 
 export class BrainWorkflow extends WorkflowEntrypoint<Env, BrainParams> {
@@ -93,15 +115,34 @@ export class BrainWorkflow extends WorkflowEntrypoint<Env, BrainParams> {
           youtubeWarning = String(error instanceof Error ? error.message : error);
         }
 
+        const watchItems = await readWatchlist(this.env);
+        const watchSources = watchItems.map(x => ({
+          title: `Watchlist: ${x.title}`,
+          url: x.url,
+          note: `Public RSS signal from channel ${x.channel_id}; published=${x.published_at}`
+        }));
+
         const recent = await this.env.DB.prepare(
-          "SELECT title, fingerprint FROM ideas ORDER BY created_at DESC LIMIT 25"
-        ).all<{ title: string; fingerprint: string }>();
+          "SELECT title FROM ideas ORDER BY created_at DESC LIMIT 25"
+        ).all<{ title: string }>();
+
+        const performance = await this.env.DB.prepare(
+          "SELECT title, views, ctr, avg_percentage_viewed, avg_view_duration_seconds, likes, comments FROM metrics ORDER BY created_at DESC LIMIT 20"
+        ).all();
 
         const publicSignals = youtube.items.length
           ? safeJson(youtube.items)
-          : "No YouTube API configured. Do not fabricate live YouTube metrics.";
+          : "No YouTube Data API configured. Do not fabricate live metrics.";
+
+        const rssSignals = watchItems.length
+          ? safeJson(watchItems)
+          : "No competitor RSS watchlist configured.";
+
+        const recentTitles = (recent.results || []).map(x => String(x.title || "")).filter(Boolean);
 
         return {
+          recentTitles,
+          sources: [...youtube.sources, ...watchSources],
           research: await ai(
             this.env,
             `${NICHE_DNA}
@@ -112,22 +153,32 @@ ${message}
 MODE:
 ${mode}
 
-RECENT INTERNAL TITLES (avoid near-duplicates):
-${safeJson(recent.results || [])}
+RECENT INTERNAL TITLES:
+${safeJson(recentTitles)}
 
-STRUCTURED PUBLIC YOUTUBE SIGNALS:
+RECENT CHANNEL PERFORMANCE (may be empty; treat as historical, not current internet-wide evidence):
+${safeJson(performance.results || [])}
+
+STRUCTURED PUBLIC YOUTUBE API SIGNALS:
 ${publicSignals}
 
-YOUTUBE WARNING:
+FREE COMPETITOR WATCHLIST RSS SIGNALS:
+${rssSignals}
+
+YOUTUBE API WARNING:
 ${youtubeWarning || "none"}
 
-Build an evidence-aware research brief. When no live YouTube data exists, explicitly say so and use stable creative/production reasoning rather than pretending it is current. Return gaps and risks that a creative strategist should solve.
+Build an evidence-aware research brief.
+- Separate measured signals from hypotheses.
+- Never invent current views, CTR, trends or competitor performance.
+- Look for content gaps, visual hooks, transformations, pacing patterns and production opportunities.
+- Explicitly note when live data is missing.
+- Avoid direct imitation.
 
-Return JSON matching the required schema.`,
+Return JSON matching the research schema.`,
             researchSchema,
             referenceImageDataUrl
-          ),
-          sources: youtube.sources
+          )
         };
       });
 
@@ -144,6 +195,9 @@ ${mode}
 
 RESEARCH:
 ${safeJson(research.research)}
+
+POTENTIAL TITLE DUPLICATE CONTEXT:
+${safeJson(research.recentTitles)}
 
 You are simultaneously:
 1) Creative Director
@@ -163,6 +217,7 @@ Requirements:
 - Adjacent shots must maintain identity, geography, direction and time progression.
 - Use 4/6/8 second shots only.
 - Do not claim exact performance outcomes.
+- Prefer distinct visual concepts when recent titles overlap.
 
 Return complete JSON matching the ProductionPack schema.`,
           productionPackSchema,
@@ -180,6 +235,9 @@ ${message}
 
 DRAFT PRODUCTION PACK:
 ${safeJson(packDraft)}
+
+RECENT TITLES FOR ORIGINALITY CHECK:
+${safeJson(research.recentTitles)}
 
 Act as a hostile visual QA editor. Do not praise the draft.
 Check hook strength, visual novelty, clarity, physical plausibility, prompt specificity, continuity, camera consistency, AI-generation difficulty, repetition, originality risk, payoff and first-seconds attention.
@@ -201,7 +259,7 @@ Return JSON matching the required schema.`,
       const finalPack = (final.final_pack || packDraft) as Record<string, unknown>;
       const titles = Array.isArray(finalPack.title_options) ? finalPack.title_options : [];
       const title = String(titles[0] || finalPack.concept || "MAHER CONTENT BRAIN");
-      const fingerprint = ideaFingerprint(title);
+      const duplicate = duplicateSignals(title, research.recentTitles);
 
       await step.do("persist", async () => {
         await updateJob(this.env, jobId, {
@@ -213,20 +271,21 @@ Return JSON matching the required schema.`,
             production_pack: finalPack,
             qa: final.qa,
             failures: final.failures,
-            repairs: final.repairs
+            repairs: final.repairs,
+            originality_check: duplicate
           })
         });
 
         await this.env.DB.prepare(
           "INSERT INTO ideas(title, fingerprint, created_at) VALUES (?, ?, ?)"
-        ).bind(title, fingerprint, now()).run();
+        ).bind(title, title.toLowerCase().replace(/\s+/g, "-").slice(0, 180), now()).run();
 
         for (const source of research.sources || []) {
           await this.env.DB.prepare(
             "INSERT INTO sources(job_id, source_type, title, url, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?)"
           ).bind(
             jobId,
-            "youtube",
+            String(source.note || "").startsWith("Public RSS") ? "youtube_rss" : "youtube",
             String(source.title || ""),
             String(source.url || ""),
             safeJson(source),
@@ -238,7 +297,7 @@ Return JSON matching the required schema.`,
           "INSERT INTO memories(label, content, created_at) VALUES (?, ?, ?)"
         ).bind(
           "latest_run",
-          `mode=${mode}; title=${title}; concept=${String(finalPack.concept || "")}`,
+          `mode=${mode}; title=${title}; duplicate_similarity=${duplicate.highest}; concept=${String(finalPack.concept || "")}`,
           now()
         ).run();
       });
